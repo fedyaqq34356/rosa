@@ -47,8 +47,8 @@ Item {
                 ParallelAnimation {
                     NumberAnimation {
                         target: wave; property: "scale"
-                        from: tile.implode ? 2.0 : 1.0
-                        to: tile.implode ? 1.0 : 2.1
+                        from: tile.implode ? 1.6 : 1.0
+                        to: tile.implode ? 1.0 : 1.6
                         duration: 1560
                         easing.type: tile.implode ? Easing.InCubic : Easing.OutCubic
                     }
@@ -92,8 +92,8 @@ Item {
             GradientStop { position: 1.0; color: Qt.darker(tile.tint, 1.55) }
         }
 
-        scale: 0.3
-        rotation: -14
+        scale: 0.6
+        rotation: -8
         opacity: 0
         Component.onCompleted: {
             face.scale = 1;
@@ -101,12 +101,12 @@ Item {
             face.opacity = 1;
         }
         Behavior on scale {
-            SpringAnimation { spring: 4.2; damping: 0.28; mass: 0.7; epsilon: 0.002 }
+            NumberAnimation { duration: 440; easing.type: Easing.Bezier; easing.bezierCurve: Motion.isleContent }
         }
         Behavior on rotation {
-            SpringAnimation { spring: 3.4; damping: 0.3; mass: 0.8; epsilon: 0.05 }
+            NumberAnimation { duration: 520; easing.type: Easing.OutCubic }
         }
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
         Rectangle {
             anchors.top: parent.top
@@ -144,7 +144,7 @@ Item {
                     PropertyAction {}
                     NumberAnimation {
                         target: sign; property: "scale"; to: 1; duration: 320
-                        easing.type: Easing.OutBack; easing.overshoot: 1.3
+                        easing.type: Easing.OutCubic
                     }
                 }
             }

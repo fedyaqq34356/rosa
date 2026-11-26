@@ -62,10 +62,12 @@ Item {
         if (sp.closing) {
             sp.closeFrom = sp.value;
             sp.closeStart = Date.now();
-            sp.velocity = 0;
+            sp.closeV = sp.velocity;
         }
         tick.running = true;
     }
+
+    property real closeV: 0
 
     Timer {
         interval: 0
@@ -80,14 +82,18 @@ Item {
 
         onTriggered: {
             if (sp.closing) {
-                const k = Math.min(1, (Date.now() - sp.closeStart)
-                                      / Math.max(1, sp.closeMs));
-                const e = sp.softClose
-                    ? (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2)
-                    : 1 - Math.pow(1 - k, 3);
-                sp.value = sp.closeFrom + (sp.target - sp.closeFrom) * e;
+                const T = Math.max(1, sp.closeMs) / 1000;
+                const k = Math.min(1, (Date.now() - sp.closeStart) / (T * 1000));
+                const d = sp.target - sp.closeFrom;
+                let m0 = (sp.softClose ? 0 : 3 * d) + sp.closeV * T;
+                m0 = d < 0 ? Math.max(m0, 3 * d) : Math.min(m0, 3 * d);
+                const k2 = k * k;
+                const k3 = k2 * k;
+                sp.value = sp.closeFrom + d * (3 * k2 - 2 * k3) + m0 * (k3 - 2 * k2 + k);
+                sp.velocity = (d * (6 * k - 6 * k2) + m0 * (3 * k2 - 4 * k + 1)) / T;
                 if (k >= 1) {
                     sp.value = sp.target;
+                    sp.velocity = 0;
                     sp.closing = false;
                     running = false;
                 }

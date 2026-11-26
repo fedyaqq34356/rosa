@@ -18,7 +18,7 @@ Item {
     Component.onCompleted: meter.shown = Math.max(0, Math.min(1, meter.value))
     onValueChanged: meter.shown = Math.max(0, Math.min(1, meter.value))
     Behavior on shown {
-        SpringAnimation { spring: 4.0; damping: 0.36; mass: 0.7; epsilon: 0.0008 }
+        SpringAnimation { spring: 4.0; damping: 0.8; mass: 0.7; epsilon: 0.0008 }
     }
 
     property real puff: 0
@@ -26,7 +26,7 @@ Item {
     SequentialAnimation {
         id: puffRun
         NumberAnimation { target: meter; property: "puff"; to: 1; duration: 90; easing.type: Easing.OutCubic }
-        NumberAnimation { target: meter; property: "puff"; to: 0; duration: 420; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+        NumberAnimation { target: meter; property: "puff"; to: 0; duration: 420; easing.type: Easing.OutCubic }
     }
 
     readonly property real thick: Math.round(meter.height * (0.62 + 0.38 * meter.puff) * 2) / 2

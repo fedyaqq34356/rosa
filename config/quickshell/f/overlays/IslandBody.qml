@@ -45,8 +45,10 @@ Item {
     signal callAccept()
     signal callDecline()
 
-    readonly property string glyph: {
-        switch (body.kind) {
+    readonly property string glyph: body.glyphFor(body.kind)
+
+    function glyphFor(k) {
+        switch (k) {
         case "alarm":  return "󰀠";
         case "remind": return "󰂞";
         case "record": return "󰑊";
@@ -65,8 +67,10 @@ Item {
         return "";
     }
 
-    readonly property string headline: {
-        switch (body.kind) {
+    readonly property string headline: body.headlineFor(body.kind)
+
+    function headlineFor(k) {
+        switch (k) {
         case "alarm":  return I18n.t("isle.alarm");
         case "remind": return Reminders.ringing ? Reminders.ringing.title : "";
         case "record": return Recorder.clock;
@@ -92,8 +96,10 @@ Item {
         return "";
     }
 
-    readonly property real fraction: {
-        switch (body.kind) {
+    readonly property real fraction: body.fractionFor(body.kind)
+
+    function fractionFor(k) {
+        switch (k) {
         case "osd":    return Feedback.showBar ? Feedback.value : -1;
         case "timer":  return Timers.soonest ? Timers.progress(Timers.soonest) : -1;
         case "media":  return Media.hasPosition ? Media.progress : -1;
@@ -105,6 +111,10 @@ Item {
 
     SystemClock { id: clockTick; precision: SystemClock.Minutes }
 
+    readonly property Loader card: body.front === 0 ? slotA : slotB
+    readonly property Loader spare: body.front === 0 ? slotB : slotA
+    readonly property string shownKind: body.alive ? body.card.kind : ""
+
     readonly property Item heroItem:
         card.item && card.status === Loader.Ready && card.item.hero ? card.item.hero : null
     readonly property bool cardReady: card.status === Loader.Ready && card.item !== null
@@ -112,41 +122,99 @@ Item {
         card.item && card.item.heroRadius !== undefined ? card.item.heroRadius : -1
 
     property bool alive: false
+    property int front: 0
 
     onWideChanged: {
         if (body.wide) {
             unmount.stop();
             body.alive = true;
+            body.swap();
         } else {
             unmount.restart();
         }
     }
 
+    onKindChanged: Qt.callLater(body.swap)
+
+    function swap() {
+        const cur = body.card.kind;
+        if (body.kind === cur)
+            return;
+        if (!body.wide) {
+            if (!body.alive)
+                body.card.kind = body.kind;
+            return;
+        }
+        if (cur === "" || body.kind === "") {
+            body.card.kind = body.kind;
+            return;
+        }
+        body.spare.kind = body.kind;
+        body.front = 1 - body.front;
+        spareDrop.restart();
+    }
+
+    Timer {
+        id: spareDrop
+        interval: 460
+        onTriggered: body.spare.kind = ""
+    }
+
     Timer {
         id: unmount
         interval: 360
-        onTriggered: body.alive = false
+        onTriggered: {
+            body.alive = false;
+            spareDrop.stop();
+            slotA.kind = "";
+            slotB.kind = "";
+            body.front = 0;
+            body.swap();
+        }
     }
 
-    Loader {
-        id: card
+    function pick(k) {
+        switch (k) {
+        case "media":  return mediaCard;
+        case "osd":    return osdCard;
+        case "timer":  return timerCard;
+        case "alarm":  return alarmCard;
+        case "remind": return remindCard;
+        case "record": return recordCard;
+        case "notif":  return notifCard;
+        case "call":   return callCard;
+        case "jarvis": return jarvisCard;
+        case "bt":     return btCard;
+        case "peri":   return periCard;
+        case "power":  return powerCard;
+        case "net":    return netCard;
+        case "vpn":    return vpnCard;
+        case "print":  return printCard;
+        case "clip":   return clipCard;
+        case "cmd":    return cmdCard;
+        case "shot":   return shotCard;
+        case "weather": return weatherCard;
+        }
+        return null;
+    }
+
+    Item {
+        id: deck
 
         anchors.fill: parent
-        active: body.alive
-        asynchronous: true
 
         opacity: body.wide ? 1 : 0
         scale: body.wide ? 1 : 0.94
         visible: opacity > 0.01
 
-        readonly property real haze: (1 - card.opacity) * 0.5
+        readonly property real haze: (1 - deck.opacity) * 0.5
 
-        layer.enabled: card.haze > 0.004
+        layer.enabled: deck.haze > 0.004
         layer.smooth: true
         layer.effect: MultiEffect {
             blurEnabled: true
             blurMax: 24
-            blur: card.haze
+            blur: deck.haze
         }
 
         transform: Translate {
@@ -190,34 +258,24 @@ Item {
             }
         }
 
-        sourceComponent: {
-            switch (body.kind) {
-            case "media":  return mediaCard;
-            case "osd":    return osdCard;
-            case "timer":  return timerCard;
-            case "alarm":  return alarmCard;
-            case "remind": return remindCard;
-            case "record": return recordCard;
-            case "notif":  return notifCard;
-            case "call":   return callCard;
-            case "jarvis": return jarvisCard;
-            case "bt":     return btCard;
-            case "peri":   return periCard;
-            case "power":  return powerCard;
-            case "net":    return netCard;
-            case "vpn":    return vpnCard;
-            case "print":  return printCard;
-            case "clip":   return clipCard;
-            case "cmd":    return cmdCard;
-            case "shot":   return shotCard;
-            case "weather": return weatherCard;
-            }
-            return null;
+        IslandDeckSlot {
+            id: slotA
+            other: slotB
+            isFront: body.front === 0
+            active: body.alive && slotA.kind !== ""
+            sourceComponent: body.pick(slotA.kind)
+        }
+        IslandDeckSlot {
+            id: slotB
+            other: slotA
+            isFront: body.front === 1
+            active: body.alive && slotB.kind !== ""
+            sourceComponent: body.pick(slotB.kind)
         }
     }
 
     Component { id: mediaCard;  MediaCard  { tint: body.tint; demo: body.demo; big: body.big } }
-    Component { id: osdCard;    OsdCard    { tint: body.tint; glyph: body.glyph } }
+    Component { id: osdCard;    OsdCard    { tint: body.tint; glyph: body.glyphFor("osd") } }
     Component { id: timerCard;  TimerCard  { tint: body.tint; demo: body.demo } }
     Component { id: alarmCard;  AlarmCard  {} }
     Component { id: remindCard; RemindCard { tint: body.tint } }
@@ -259,14 +317,14 @@ Item {
     }
     Component {
         id: btCard
-        BtCard { tint: body.tint; demo: body.demo; glyph: body.glyph; headline: body.headline }
+        BtCard { tint: body.tint; demo: body.demo; glyph: body.glyphFor("bt"); headline: body.headlineFor("bt") }
     }
     Component {
         id: periCard
-        PeriCard { demo: body.demo; glyph: body.glyph; headline: body.headline }
+        PeriCard { demo: body.demo; glyph: body.glyphFor("peri"); headline: body.headlineFor("peri") }
     }
     Component { id: powerCard;  PowerCard  { tint: body.tint; demo: body.demo } }
-    Component { id: netCard;    NetCard    { tint: body.tint; headline: body.headline } }
+    Component { id: netCard;    NetCard    { tint: body.tint; headline: body.headlineFor("net") } }
     Component { id: vpnCard;    VpnCard    { tint: body.tint } }
     Component { id: printCard;  PrintCard  { tint: body.tint; demo: body.demo } }
     Component {

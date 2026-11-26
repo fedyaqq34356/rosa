@@ -41,7 +41,7 @@ Scope {
             anchors.fill: parent
             color: "#000000"
             opacity: root.shown ? 0.55 : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.base } }
+            Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
 
             MouseArea {
                 anchors.fill: parent

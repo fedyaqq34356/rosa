@@ -16,6 +16,7 @@ Island Island.qml
 IslandWindow IslandWindow.qml
 IslandSources IslandSources.qml
 IslandBody IslandBody.qml
+IslandDeckSlot IslandDeckSlot.qml
 IslandPill IslandPill.qml
 IslandOrb IslandOrb.qml
 IslandRim IslandRim.qml

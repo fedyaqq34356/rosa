@@ -13,6 +13,7 @@ Scope {
     id: root
 
     property bool shown: false
+    property var screenOverride: null
     property string tab: "out"
 
     readonly property string mono: Fonts.mono
@@ -186,7 +187,7 @@ Scope {
     }
 
     HyprlandFocusGrab {
-        active: root.shown
+        active: root.shown && !root.screenOverride
         windows: [win]
         onCleared: root.close()
     }
@@ -194,9 +195,9 @@ Scope {
     PanelWindow {
         id: win
         WlrLayershell.namespace: "qs-audio"
-        screen: Focus.screen
+        screen: root.screenOverride ? root.screenOverride : Focus.screen
         visible: root.shown
-        focusable: true
+        focusable: !root.screenOverride
 
         anchors { top: true; bottom: true; left: true; right: true }
         exclusiveZone: -1
@@ -206,7 +207,7 @@ Scope {
             anchors.fill: parent
             color: "#000000"
             opacity: root.shown ? 0.38 : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.base } }
+            Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
 
             MouseArea {
                 anchors.fill: parent

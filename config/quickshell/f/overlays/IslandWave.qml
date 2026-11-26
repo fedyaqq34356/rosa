@@ -167,9 +167,8 @@ Item {
             NumberAnimation {
                 target: nudge; property: "y"
                 to: 0
-                duration: 260
-                easing.type: Easing.OutBack
-                easing.overshoot: 1.2
+                duration: 300
+                easing.type: Easing.OutCubic
             }
         }
 

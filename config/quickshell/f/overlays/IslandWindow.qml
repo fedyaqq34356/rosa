@@ -150,6 +150,9 @@ PanelWindow {
         return "";
     }
 
+    readonly property string sizeKind:
+        body.shownKind !== "" ? body.shownKind : win.wideKind
+
     readonly property bool replying:
         win.hub.replyOn !== "" && win.hub.replyOn === win.modelData.name
         && win.wideKind === "notif"
@@ -230,7 +233,7 @@ PanelWindow {
         id: windup
         springBack: true
         response: 0.22
-        damping: 0.42
+        damping: 1.0
         epsilon: 0.002
         target: 0
     }
@@ -285,7 +288,19 @@ PanelWindow {
             return Colors.outline;
         if (win.wide && win.wideKind === "media")
             return win.mediaTint;
-        switch (win.hub.kind) {
+        return win.tintFor(win.hub.kind);
+    }
+
+    readonly property color cardTint: {
+        if (!IslandConfig.s("tintEdge"))
+            return Colors.outline;
+        if (win.sizeKind === "media")
+            return win.mediaTint;
+        return win.tintFor(win.sizeKind);
+    }
+
+    function tintFor(k) {
+        switch (k) {
         case "alarm":  return Colors.bad;
         case "remind": return Colors.warn;
         case "record": return Colors.bad;
@@ -413,12 +428,12 @@ PanelWindow {
         id: wideTall
         springBack: true
         response: win.bigMotion ? 0.56 : Motion.isleWidthResponse
-        damping: win.bigMotion ? 1.0 : 0.78
+        damping: win.bigMotion ? 1.0 : 0.92
         epsilon: 0.25
         target: win.big ? IslandConfig.s("mediaBigHeight")
-              : win.wideKind === "media" ? IslandConfig.s("mediaHeight")
-              : win.wideKind === "jarvis" ? Math.max(IslandConfig.s("wideHeight"), body.want)
-              : win.wideKind === "notif"
+              : win.sizeKind === "media" ? IslandConfig.s("mediaHeight")
+              : win.sizeKind === "jarvis" ? Math.max(IslandConfig.s("wideHeight"), body.want)
+              : win.sizeKind === "notif"
               ? Math.max(IslandConfig.s("wideHeight") + (win.notifTools ? 40 : 0), body.want + 24)
               : IslandConfig.s("wideHeight") + (win.notifTools ? 40 : 0)
         Component.onCompleted: wideTall.land()
@@ -428,7 +443,7 @@ PanelWindow {
         id: wideSpan
         springBack: true
         response: win.bigMotion ? 0.56 : 0.44
-        damping: win.bigMotion ? 1.0 : 0.74
+        damping: win.bigMotion ? 1.0 : 0.92
         epsilon: 0.25
         target: win.big ? IslandConfig.s("mediaBigWidth") : IslandConfig.s("wideWidth")
         Component.onCompleted: wideSpan.land()
@@ -655,9 +670,9 @@ PanelWindow {
         magP.target = p;
     }
 
-    MorphSpring { id: magX; springBack: true; response: 0.42; damping: 0.55; epsilon: 0.01 }
-    MorphSpring { id: magY; springBack: true; response: 0.42; damping: 0.55; epsilon: 0.01 }
-    MorphSpring { id: magP; springBack: true; response: 0.36; damping: 0.62; epsilon: 0.002 }
+    MorphSpring { id: magX; springBack: true; response: 0.42; damping: 0.9; epsilon: 0.01 }
+    MorphSpring { id: magY; springBack: true; response: 0.42; damping: 0.9; epsilon: 0.01 }
+    MorphSpring { id: magP; springBack: true; response: 0.36; damping: 0.92; epsilon: 0.002 }
 
     Socket {
         id: cursorSock
@@ -695,7 +710,7 @@ PanelWindow {
         id: drift
         springBack: true
         response: 0.30
-        damping: 0.52
+        damping: 0.86
         epsilon: 0.002
         target: 0
     }
@@ -1273,18 +1288,27 @@ PanelWindow {
                * (1 + 0.016 * voice.value)
 
         readonly property real rush:
-            morph.velocity * 0.16
-            + seek.velocity * 0.12
+            (morph.closing ? 0 : morph.velocity) * 0.16
+            + (seek.closing ? 0 : seek.velocity) * 0.12
             + pillWidth.velocity / 420
-            + birth.velocity * 0.12
+            + (birth.closing ? 0 : birth.velocity) * 0.12
             + Math.abs(drift.velocity) * 0.10
 
-        readonly property real jelly: IslandConfig.s("jelly")
-            ? Math.max(-Motion.isleJellyCap,
-                       Math.min(Motion.isleJellyCap,
-                                stage.rush * Motion.isleJelly))
-              * (win.bigMotion ? 0.35 : 1)
-            : 0
+        MorphSpring {
+            id: jellySmooth
+            springBack: true
+            response: 0.16
+            damping: 1.0
+            epsilon: 0.0005
+            target: IslandConfig.s("jelly")
+                ? Math.max(-Motion.isleJellyCap,
+                           Math.min(Motion.isleJellyCap,
+                                    stage.rush * Motion.isleJelly))
+                  * (win.bigMotion ? 0.35 : 1)
+                : 0
+        }
+
+        readonly property real jelly: jellySmooth.value
 
         transform: [
             Scale {
@@ -2039,8 +2063,9 @@ PanelWindow {
                 IslandPill {
                     id: pill
                     anchors.centerIn: parent
+                    width: Math.max(0, surface.width - 26)
                     height: stage.pillH
-                    maxWidth: surface.width
+                    maxWidth: pillWidth.target
                     notifApp: win.hub.notifApp
                     notifIconUrl: win.hub.notifIconUrl
                     clipImage: win.hub.flashKind === "shot" && win.hub.shotPath !== ""
@@ -2088,7 +2113,7 @@ PanelWindow {
                         enabled: !win.bigMotion
                         SequentialAnimation {
                             PauseAnimation {
-                                duration: win.wide || win.seeking ? 0 : Motion.isleRevealDelay
+                                duration: win.wide || win.seeking ? 0 : Motion.isleHideMs + 30
                             }
                             NumberAnimation {
                                 duration: win.wide || win.seeking ? Motion.isleHideMs
@@ -2101,7 +2126,7 @@ PanelWindow {
                     Behavior on scale {
                         SequentialAnimation {
                             PauseAnimation {
-                                duration: win.wide || win.seeking ? 0 : Motion.isleRevealDelay
+                                duration: win.wide || win.seeking ? 0 : Motion.isleHideMs + 30
                             }
                             NumberAnimation {
                                 duration: win.wide || win.seeking ? Motion.isleHideMs
@@ -2126,11 +2151,13 @@ PanelWindow {
                 }
 
                 IslandBody {
-                    anchors.fill: parent
-                    anchors.margins: 12
                     id: body
+                    x: Math.round((surface.width - width) / 2)
+                    y: 12
+                    width: Math.max(0, wideSpan.value - 24)
+                    height: Math.max(0, wideTall.value - 24)
                     kind: win.wideKind
-                    tint: win.tint
+                    tint: win.cardTint
                     wide: win.opened
                     big: win.big
                     opacity: {
@@ -2203,7 +2230,7 @@ PanelWindow {
                     MorphSpring {
                         id: heroRun
                         response: 0.50
-                        damping: win.bigMotion ? 0.92 : 0.70
+                        damping: win.bigMotion ? 0.94 : 0.9
                         closeMs: 300
                         softClose: true
                         target: 0
@@ -2518,10 +2545,12 @@ PanelWindow {
         Item {
             id: trail
             anchors.fill: parent
+            z: -1
             visible: IslandConfig.s("trail") && !win.bigMotion && trail.speed > 0.02
 
             readonly property real speed: Math.min(1,
-                Math.abs(morph.velocity) / 3 + Math.abs(pillWidth.velocity) / 800)
+                Math.abs(morph.closing ? 0 : morph.velocity) / 3
+                + Math.abs(pillWidth.velocity) / 800)
 
             property var samples: []
             property bool chasing: false
@@ -2663,7 +2692,7 @@ PanelWindow {
             property real wobP: 1
             readonly property real wob: dot.wobP >= 1 ? 0
                 : Math.exp(-4.2 * dot.wobP)
-                  * Math.sin(dot.wobP * Math.PI * 3.5) * 0.22
+                  * Math.sin(dot.wobP * Math.PI * 2) * 0.12
             readonly property real blobScaleX: 1 + dot.wob
             readonly property real blobScaleY: 1 - dot.wob * 0.8
             onWobChanged: goo.requestSync()
@@ -2734,7 +2763,7 @@ PanelWindow {
             property real wobP: 1
             readonly property real wob: task.wobP >= 1 ? 0
                 : Math.exp(-4.2 * task.wobP)
-                  * Math.sin(task.wobP * Math.PI * 3.5) * 0.22
+                  * Math.sin(task.wobP * Math.PI * 2) * 0.12
             readonly property real blobScaleX: 1 + task.wob
             readonly property real blobScaleY: 1 - task.wob * 0.8
             onWobChanged: goo.requestSync()
@@ -2868,7 +2897,7 @@ PanelWindow {
             anchors.verticalCenter: surface.verticalCenter
             scale: privacy.on ? 1 : 0
             visible: scale > 0.01
-            Behavior on scale { SpringAnimation { spring: 4; damping: 0.3; mass: 0.7; epsilon: 0.005 } }
+            Behavior on scale { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
 
             readonly property color hue: privacy.cam ? Qt.rgba(0.19, 0.82, 0.35, 1)
                                                      : Qt.rgba(1.0, 0.62, 0.04, 1)

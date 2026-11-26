@@ -45,7 +45,7 @@ Singleton {
     readonly property real isleHoverDamping:  0.92
     readonly property real isleHoverScale:    1.028
     readonly property real islePeekResponse:  0.30
-    readonly property real islePeekDamping:   0.70
+    readonly property real islePeekDamping:   0.88
     readonly property real islePeekScale:     1.04
     readonly property int  islePeekHoldMs:    90
 
@@ -62,12 +62,12 @@ Singleton {
 
     readonly property real isleTapScale:    0.965
     readonly property real isleTapResponse: 0.22
-    readonly property real isleTapDamping:  0.70
+    readonly property real isleTapDamping:  0.86
 
-    readonly property real isleSquashX:        0.055
-    readonly property real isleSquashY:        0.17
+    readonly property real isleSquashX:        0.045
+    readonly property real isleSquashY:        0.12
     readonly property real isleSquashResponse: 0.26
-    readonly property real isleSquashDamping:  0.34
+    readonly property real isleSquashDamping:  0.72
 
     readonly property int  isleShakeMs:   460
     readonly property real isleShakePx:   9

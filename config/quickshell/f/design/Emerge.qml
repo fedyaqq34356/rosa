@@ -77,7 +77,7 @@ Item {
     }
 
     Timer { id: depart; interval: 70; onTriggered: em.go = true }
-    Timer { id: leave; interval: em.dock ? 20 : 150; onTriggered: em.leaving = false }
+    Timer { id: leave; interval: em.dock ? 20 : 40; onTriggered: em.leaving = false }
 
     readonly property bool living: em.on && !em.open
         && (grow.value > 0.01 || travel.value > 0.01 || em.leaving)
@@ -126,8 +126,8 @@ Item {
     NumberAnimation {
         id: revealOut
         target: em; property: "reveal"
-        to: 0; duration: 220
-        easing.type: Easing.InOutSine
+        to: 0; duration: 300
+        easing.type: Easing.InQuad
     }
 
     readonly property bool revealing: em.cardOpacity < 0.99 || em.pour < 0.999
@@ -194,6 +194,16 @@ Item {
             maskSpreadAtMin: 1.0
         }
     }
+    readonly property real closeScale: em.fw > 0 && em.fh > 0
+        ? Math.max(0.2, Math.min(1, em.bw / em.fw, em.bh / em.fh)) : 1
+
+    Binding {
+        target: em.card
+        property: "scale"
+        value: em.closeScale
+        when: em.card !== null && em.living
+    }
+
     readonly property real dx: em.on ? em.bcx - em.fx : 0
     readonly property real dy: em.on ? em.bcy - em.fy : 0
 
@@ -409,6 +419,7 @@ Item {
         enabled: false
         visible: em.on && em.card !== null && em.cardOpacity > 0.01
         opacity: em.cardOpacity
+        scale: em.living ? em.closeScale : 1
         x: em.card ? em.card.x + em.dx : 0
         y: em.card ? em.card.y + em.dy : 0
         width: em.fw

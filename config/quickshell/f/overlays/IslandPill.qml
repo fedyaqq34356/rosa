@@ -48,7 +48,8 @@ Item {
 
     readonly property int crabIdleSec: 90
     property bool userIdle: false
-    readonly property bool crabOn: (pill.userIdle || IslandBus.crabDemo) && pill.visible && !pill.flashing
+    property bool crabGreet: false
+    readonly property bool crabOn: (pill.userIdle || pill.crabGreet || IslandBus.crabDemo) && pill.visible && !pill.flashing
                                    && !Stage.gaming && !Idle.screenOff && !IslandBus.locked
                                    && !Jarvis.active
     readonly property bool hideClock: pill.flashing || pill.crabOn
@@ -57,7 +58,19 @@ Item {
         enabled: !IslandBus.locked
         timeout: pill.crabIdleSec
         respectInhibitors: true
-        onIsIdleChanged: pill.userIdle = isIdle
+        onIsIdleChanged: {
+            if (!isIdle && crab.running && !crab.dancing) {
+                pill.crabGreet = true;
+                crabGreetT.restart();
+            }
+            pill.userIdle = isIdle;
+        }
+    }
+
+    Timer {
+        id: crabGreetT
+        interval: 1050
+        onTriggered: pill.crabGreet = false
     }
 
     TextMetrics {
@@ -207,13 +220,13 @@ Item {
         id: pop
         NumberAnimation {
             target: mark; property: "scale"
-            to: 1.2; duration: 110
-            easing.type: Easing.OutBack; easing.overshoot: 2.4
+            to: 1.14; duration: 140
+            easing.type: Easing.OutCubic
         }
         NumberAnimation {
             target: mark; property: "scale"
-            to: 1.0; duration: 240
-            easing.type: Easing.OutCubic
+            to: 1.0; duration: 300
+            easing.type: Easing.InOutSine
         }
     }
 
@@ -238,8 +251,8 @@ Item {
                 Math.max(0, Math.min(1, pill.flashFraction))
             readonly property bool on: pill.osdFlash && pill.flashFraction >= 0
 
-            x: -(pill.maxWidth - pill.width) / 2
-            width: pill.maxWidth
+            x: -13
+            width: pill.width + 26
             height: pill.height
             anchors.verticalCenter: parent.verticalCenter
 
@@ -318,8 +331,8 @@ Item {
                 ParallelAnimation {
                     NumberAnimation {
                         target: sweep; property: "x"
-                        from: -(pill.maxWidth - pill.width) / 2 - sweep.span
-                        to: (pill.maxWidth + pill.width) / 2
+                        from: -13 - sweep.span
+                        to: pill.width + 13
                         duration: 620
                         easing.type: Easing.Bezier
                         easing.bezierCurve: Motion.isleContent
@@ -413,30 +426,41 @@ Item {
                 }
             }
 
+            Item {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width + 48
+                height: parent.height
+                clip: true
+
             IslandCrab {
                 id: crab
                 anchors.horizontalCenter: parent.horizontalCenter
                 p: Math.max(2, Math.floor(pill.inner / 9))
-                y: Math.round((parent.height - height) / 2) + (pill.crabOn ? 0 : -6)
+                y: pill.crabOn ? Math.round((parent.height - height) / 2) : parent.height + 2
                 body: Colors.accent
                 eye: Colors.bg
                 opacity: pill.crabOn ? 1 : 0
                 visible: opacity > 0.01
                 running: pill.crabOn && opacity > 0.99
+                greeting: pill.crabGreet
                 dancing: pill.miniMedia
 
                 Behavior on opacity {
                     SequentialAnimation {
-                        PauseAnimation { duration: pill.crabOn ? Motion.isleRevealDelay + 120 : 0 }
-                        NumberAnimation { duration: pill.crabOn ? 420 : 140; easing.type: Easing.OutCubic }
+                        PauseAnimation { duration: pill.crabOn ? Motion.isleRevealDelay + 120 : 120 }
+                        NumberAnimation { duration: pill.crabOn ? 420 : 300; easing.type: Easing.OutCubic }
                     }
                 }
                 Behavior on y {
                     SequentialAnimation {
                         PauseAnimation { duration: pill.crabOn ? Motion.isleRevealDelay + 120 : 0 }
-                        NumberAnimation { duration: pill.crabOn ? 420 : 140; easing.type: Easing.OutBack }
+                        NumberAnimation {
+                            duration: 420
+                            easing.type: pill.crabOn ? Easing.OutCubic : Easing.InCubic
+                        }
                     }
                 }
+            }
             }
 
             Item {
@@ -933,8 +957,8 @@ Item {
                     Behavior on scale {
                         NumberAnimation {
                             duration: Motion.isleRevealMs
-                            easing.type: Easing.OutBack
-                            easing.overshoot: 1.8
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Motion.isleContent
                         }
                     }
 
@@ -960,13 +984,13 @@ Item {
                         id: stackPop
                         NumberAnimation {
                             target: stackDisc; property: "scale"
-                            to: 1.28; duration: 120
-                            easing.type: Easing.OutBack; easing.overshoot: 2.6
+                            to: 1.18; duration: 140
+                            easing.type: Easing.OutCubic
                         }
                         NumberAnimation {
                             target: stackDisc; property: "scale"
-                            to: 1.0; duration: 260
-                            easing.type: Easing.OutCubic
+                            to: 1.0; duration: 300
+                            easing.type: Easing.InOutSine
                         }
                     }
 
@@ -1060,8 +1084,8 @@ Item {
             Behavior on scale {
                 NumberAnimation {
                     duration: pill.miniMedia ? Motion.isleRevealMs + 80 : Motion.isleHideMs
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.6
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Motion.isleContent
                 }
             }
         }

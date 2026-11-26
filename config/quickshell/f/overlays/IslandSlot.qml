@@ -77,7 +77,7 @@ Item {
 
     SequentialAnimation {
         id: okPop
-        NumberAnimation { target: slot; property: "scale"; to: 1.28; duration: 130; easing.type: Easing.OutBack; easing.overshoot: 1.3 }
+        NumberAnimation { target: slot; property: "scale"; to: 1.2; duration: 150; easing.type: Easing.OutCubic }
         NumberAnimation { target: slot; property: "scale"; to: 1.0;  duration: 300; easing.type: Easing.OutCubic }
     }
 
