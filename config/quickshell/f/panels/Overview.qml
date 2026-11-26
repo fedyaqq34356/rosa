@@ -13,6 +13,51 @@ Scope {
     property bool shown: false
     property int selected: 0
     property string filter: ""
+    property var screenOverride: null
+    property int picked: -1
+
+    readonly property real p: flip.value
+    readonly property bool alive: root.shown || flip.value > 0.002
+
+    function ease(a, b, x) {
+        const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+        return t * t * (3 - 2 * t);
+    }
+
+    function geomOf(toplevel) {
+        const list = Hyprland.toplevels ? Hyprland.toplevels.values : [];
+        for (const t of list) {
+            if (!t || t.wayland !== toplevel)
+                continue;
+            const o = t.lastIpcObject;
+            if (!o || !o.at || !o.size)
+                return null;
+            return { x: o.at[0], y: o.at[1], w: o.size[0], h: o.size[1],
+                     ws: o.workspace ? o.workspace.id : -1,
+                     hidden: !!o.hidden };
+        }
+        return null;
+    }
+
+    readonly property int curWs: {
+        const s = win.screen;
+        const m = s ? Hyprland.monitorFor(s) : null;
+        return m && m.activeWorkspace ? m.activeWorkspace.id : -1;
+    }
+
+    MorphSpring {
+        id: flip
+        target: 0
+        response: 0.50
+        damping: 1.0
+        springBack: true
+    }
+
+    Timer {
+        id: launch
+        interval: 45
+        onTriggered: flip.target = root.shown ? 1 : 0
+    }
 
     readonly property string mono: Fonts.mono
 
@@ -51,7 +96,7 @@ Scope {
         return -1;
     }
 
-    function toggle() { root.shown = !root.shown; }
+    function toggle() { if (root.shown) root.close(); else root.shown = true; }
     function close()  { root.shown = false; }
 
     onShownChanged: {
@@ -59,7 +104,13 @@ Scope {
         if (shown) {
             filter = "";
             selected = 0;
+            picked = -1;
+            Hyprland.refreshToplevels();
+            launch.restart();
             Qt.callLater(root.takeFocus);
+        } else {
+            launch.stop();
+            flip.target = 0;
         }
     }
 
@@ -73,6 +124,7 @@ Scope {
     function activate(index) {
         const t = root.windows[index];
         if (!t) return;
+        root.picked = index;
         root.close();
         t.activate();
     }
@@ -84,7 +136,7 @@ Scope {
     }
 
     HyprlandFocusGrab {
-        active: root.shown
+        active: root.shown && !root.screenOverride
         windows: [win]
         onCleared: root.close()
     }
@@ -92,9 +144,9 @@ Scope {
     PanelWindow {
         WlrLayershell.namespace: "qs-overview"
         id: win
-        screen: Focus.screen
-        visible: root.shown
-        focusable: true
+        screen: root.screenOverride || Focus.screen
+        visible: root.alive
+        focusable: !root.screenOverride
 
         anchors { top: true; bottom: true; left: true; right: true }
         exclusiveZone: -1
@@ -102,16 +154,16 @@ Scope {
 
         Loader {
             anchors.fill: parent
-            active: root.shown
+            active: root.alive
 
             sourceComponent: Item {
+                id: stage
                 anchors.fill: parent
 
                 Rectangle {
                     anchors.fill: parent
                     color: "#000000"
-                    opacity: root.shown ? 0.66 : 0
-                    Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
+                    opacity: 0.66 * root.ease(0, 0.85, root.p)
 
                     MouseArea {
                         anchors.fill: parent
@@ -148,14 +200,15 @@ Scope {
                     }
 
                     Column {
+                        id: col
                         anchors.centerIn: parent
                         spacing: 26
 
-                        opacity: root.shown ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: Motion.base } }
-
                         Rectangle {
                             id: field
+
+                            opacity: root.ease(0.35, 1, root.p)
+                            transform: Translate { y: -14 * (1 - root.ease(0.2, 1, root.p)) }
 
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 460
@@ -255,25 +308,47 @@ Scope {
                                     width: 400
                                     height: 268
 
-                                    opacity: 0
-                                    scale: 0.94
+                                    readonly property var geo: root.alive ? root.geomOf(modelData) : null
+                                    readonly property real scrX: win.screen ? win.screen.x : 0
+                                    readonly property real scrY: win.screen ? win.screen.y : 0
+                                    readonly property bool here: !!slot.geo && !slot.geo.hidden
+                                        && slot.geo.ws === root.curWs
+                                        && slot.geo.x - slot.scrX > -slot.geo.w
+                                        && slot.geo.x - slot.scrX < stage.width
+                                    readonly property bool chosen: root.picked === slot.index
 
-                                    SequentialAnimation {
-                                        running: true
-                                        PauseAnimation { duration: Motion.delay(slot.index) }
-                                        ParallelAnimation {
-                                            NumberAnimation {
-                                                target: slot; property: "opacity"; to: 1
-                                                duration: Motion.base
-                                            }
-                                            NumberAnimation {
-                                                target: slot; property: "scale"; to: 1
-                                                duration: Motion.slow
-                                                easing.type: Easing.Bezier
-                                                easing.bezierCurve: Motion.snap
-                                            }
-                                        }
+                                    readonly property point home: {
+                                        void col.x; void col.y; void grid.x; void grid.y;
+                                        void grid.width; void stage.width;
+                                        return grid.mapToItem(stage, slot.x, slot.y);
                                     }
+
+                                    readonly property real k: Math.max(0, Math.min(1, root.p))
+                                    readonly property real side: {
+                                        if (!slot.geo || slot.geo.ws < 0 || root.curWs < 0)
+                                            return 0;
+                                        return slot.geo.ws > root.curWs ? 1 : slot.geo.ws < root.curWs ? -1 : 0;
+                                    }
+
+                                    readonly property real fx: slot.here ? slot.geo.x - slot.scrX : slot.home.x + slot.side * 160
+                                    readonly property real fy: slot.here ? slot.geo.y - slot.scrY : slot.home.y + 18
+                                    readonly property real fsx: slot.here ? slot.geo.w / slot.width : 0.92
+                                    readonly property real fsy: slot.here ? slot.geo.h / slot.height : 0.92
+
+                                    opacity: slot.here || (slot.chosen && !root.shown) ? 1 : root.ease(0, 0.9, slot.k)
+                                    z: slot.chosen || slot.current ? 2 : 1
+
+                                    transform: [
+                                        Scale {
+                                            origin.x: 0; origin.y: 0
+                                            xScale: slot.fsx + (1 - slot.fsx) * slot.k
+                                            yScale: slot.fsy + (1 - slot.fsy) * slot.k
+                                        },
+                                        Translate {
+                                            x: (slot.fx - slot.home.x) * (1 - slot.k)
+                                            y: (slot.fy - slot.home.y) * (1 - slot.k)
+                                        }
+                                    ]
 
                                     Rectangle {
                                         z: -1
@@ -282,8 +357,8 @@ Scope {
                                         height: parent.height - 16
                                         radius: Shape.card
                                         color: Colors.accent
-                                        opacity: slot.current ? 0.32
-                                               : (cardArea.containsMouse ? 0.16 : 0)
+                                        opacity: (slot.current ? 0.32
+                                               : (cardArea.containsMouse ? 0.16 : 0)) * root.ease(0.6, 1, slot.k)
                                         Behavior on opacity { NumberAnimation { duration: Motion.base } }
 
                                         layer.enabled: opacity > 0.01
@@ -298,10 +373,10 @@ Scope {
                                         id: card
 
                                         anchors.fill: parent
-                                        radius: Shape.card
+                                        radius: Shape.card + (Shape.window / Math.max(0.2, Math.min(slot.fsx, slot.fsy)) - Shape.card) * (1 - slot.k)
                                         color: Qt.rgba(Colors.bg.r, Colors.bg.g,
-                                                       Colors.bg.b, 0.92)
-                                        border.width: slot.current ? 2 : 1
+                                                       Colors.bg.b, 0.92 * root.ease(0.3, 1, slot.k))
+                                        border.width: slot.k > 0.5 ? (slot.current ? 2 : 1) : 0
                                         border.color: slot.current
                                             ? Colors.accent
                                             : Qt.rgba(Colors.outline.r, Colors.outline.g,
@@ -342,6 +417,7 @@ Scope {
                                             anchors.right: parent.right
                                             anchors.bottom: parent.bottom
                                             height: 62
+                                            opacity: root.ease(0.55, 1, slot.k)
 
                                             gradient: Gradient {
                                                 GradientStop {
@@ -358,6 +434,7 @@ Scope {
                                         }
 
                                         Row {
+                                            opacity: root.ease(0.6, 1, slot.k)
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.bottom: parent.bottom
@@ -433,6 +510,7 @@ Scope {
 
                                         Sheen {
                                             anchors.fill: parent
+                                            opacity: root.ease(0.5, 1, slot.k)
                                             radius: Shape.card
                                             border: false
                                             grainOpacity: 0.02
@@ -445,6 +523,7 @@ Scope {
                                         anchors.fill: parent
                                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                                         hoverEnabled: true
+                                        enabled: root.shown
                                         cursorShape: Qt.PointingHandCursor
                                         onEntered: root.selected = slot.index
                                         onClicked: mouse => {
@@ -460,10 +539,10 @@ Scope {
 
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
+                            opacity: 0.5 * root.ease(0.4, 1, root.p)
                             visible: root.windows.length === 0
                             text: root.filter === "" ? I18n.t("ov.noWindows") : I18n.t("ov.noMatch")
                             color: Colors.fgDim
-                            opacity: 0.5
                             font.family: root.mono
                             font.pixelSize: Fonts.medium
                         }
@@ -472,7 +551,7 @@ Scope {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: I18n.t("ov.keys")
                             color: Colors.fgDim
-                            opacity: 0.4
+                            opacity: 0.4 * root.ease(0.5, 1, root.p)
                             font.family: root.mono
                             font.pixelSize: Fonts.tiny
                         }

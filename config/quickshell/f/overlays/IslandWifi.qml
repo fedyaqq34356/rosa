@@ -24,11 +24,37 @@ Item {
     }
     readonly property real w: wire.value
 
+    MorphSpring {
+        id: link
+        target: fan.on || fan.wired ? 1 : 0
+        response: 0.75
+        damping: 1
+        springBack: true
+    }
+    readonly property real lk: link.value
+
+    function shown(n) {
+        const t = Math.max(0, Math.min(1, (fan.lk - (n - 1) / 4) / 0.5));
+        return t * t * (3 - 2 * t);
+    }
+
+    property real breath: 0
+    SequentialAnimation on breath {
+        running: !fan.on && !fan.wired && fan.visible
+        loops: Animation.Infinite
+        paused: running && Stage.gaming
+        onStopped: fan.breath = 0
+        NumberAnimation { from: 0; to: 1; duration: 1500; easing.type: Easing.InOutSine }
+        NumberAnimation { from: 1; to: 0; duration: 1500; easing.type: Easing.InOutSine }
+    }
+
     Component.onCompleted: {
         if (fan.morphIn)
             wire.value = fan.wired ? 0 : 1;
         else
             wire.land();
+        link.settle(fan.on || fan.wired ? 0 : 1);
+        link.target = Qt.binding(() => fan.on || fan.wired ? 1 : 0);
     }
 
     property real sweep: -1
@@ -36,8 +62,8 @@ Item {
         : fan.on ? Math.max(1, Math.ceil(fan.strength * 3)) : 0
 
     SequentialAnimation {
-        running: !fan.wired
-        loops: fan.on ? 2 : Animation.Infinite
+        running: !fan.wired && fan.on
+        loops: 2
         paused: running && Stage.gaming
         NumberAnimation {
             target: fan; property: "sweep"
@@ -100,8 +126,8 @@ Item {
         x: fan.cx - width / 2
         y: Motion.mix(fan.by - dot / 2 - 1, fan.plugBottom - 1, fan.w)
         antialiasing: true
-        color: fan.on || fan.wired ? fan.tint : Colors.alpha(Colors.fg, 0.25)
-        scale: 1 + fan.glow(0) * 0.35
+        color: fan.on || fan.wired ? fan.tint : Colors.alpha(Colors.fg, 0.28 + 0.32 * fan.breath)
+        scale: 1 + fan.glow(0) * 0.35 + (1 - fan.lk) * 0.12 * fan.breath
     }
 
     Repeater {
@@ -111,7 +137,9 @@ Item {
             id: arc
             required property int index
             readonly property int n: arc.index + 1
-            readonly property real r: fan.stroke * 1.2 + arc.n * (fan.height - fan.stroke * 2) / 3.3
+            readonly property real q: fan.w > 0.001 ? 1 : fan.shown(arc.n)
+            readonly property real r: (fan.stroke * 1.2 + arc.n * (fan.height - fan.stroke * 2) / 3.3)
+                                      * (0.55 + 0.45 * arc.q)
             readonly property real g: fan.glow(arc.n)
 
             readonly property real s: 0.70711 * arc.r
@@ -125,15 +153,14 @@ Item {
 
             anchors.fill: parent
             preferredRendererType: Vec.Shape.CurveRenderer
-            opacity: fan.lit(arc.n) ? 1 : (0.2 + 0.8 * arc.g)
-
-            Behavior on opacity { NumberAnimation { duration: 200 } }
+            opacity: arc.q * (fan.lit(arc.n) || !fan.on ? 1 : (0.2 + 0.8 * arc.g))
+            visible: arc.q > 0.002
 
             Vec.ShapePath {
                 strokeColor: fan.lit(arc.n) || arc.g > 0
                     ? Qt.lighter(fan.tint, 1 + arc.g * 0.5)
                     : Colors.alpha(Colors.fg, 1)
-                strokeWidth: Motion.mix(fan.stroke, fan.stroke * 0.6, fan.w)
+                strokeWidth: Motion.mix(fan.stroke * (0.5 + 0.5 * arc.q), fan.stroke * 0.6, fan.w)
                 fillColor: "transparent"
                 capStyle: Vec.ShapePath.RoundCap
                 startX: arc.at(fan.cx - arc.s, arc.px)

@@ -367,7 +367,7 @@ Item {
                 }
             }
 
-            RollText {
+            LiquidText {
                 id: clockText
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: pill.flashing ? -height : pill.crabOn ? parent.height : Math.round((parent.height - height) / 2)

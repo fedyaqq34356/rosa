@@ -22,3 +22,4 @@ FaceBadge FaceBadge.qml
 WeatherHold WeatherHold.qml
 OptionRow OptionRow.qml
 ArtTint ArtTint.qml
+LiquidText LiquidText.qml

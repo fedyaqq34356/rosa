@@ -95,6 +95,8 @@ Scope {
             return "launch";
         if (root.downloadPhase !== "")
             return "download";
+        if (root.urgent !== null)
+            return "urgent";
         if (IslandConfig.on("print") && Printing.jobs.length > 0)
             return "print";
         if (IslandConfig.on("task") && (root.taskShown || root.taskResult !== ""))
@@ -401,6 +403,55 @@ Scope {
                 root.demoWide = true;
                 demoLife.restart();
             }
+        }
+    }
+
+    property var urgent: null
+
+    function urgentIcon(cls) {
+        const de = DesktopEntries.heuristicLookup(cls);
+        const name = de && de.icon ? de.icon : cls;
+        return Quickshell.iconPath(name, "application-x-executable");
+    }
+
+    function urgentRaise(addr) {
+        if (!IslandConfig.s("enabled") || !IslandConfig.s("leftSlot"))
+            return;
+        const bare = root.bareAddr(addr);
+        const act = Hyprland.activeToplevel;
+        if (act && root.bareAddr(act.address) === bare)
+            return;
+        let cls = "";
+        const list = Hyprland.toplevels ? Hyprland.toplevels.values : [];
+        for (const t of list) {
+            if (t && root.bareAddr(t.address) === bare) {
+                const o = t.lastIpcObject;
+                cls = (o && o["class"]) || (t.wayland ? t.wayland.appId : "") || "";
+                break;
+            }
+        }
+        root.urgent = { addr: bare, icon: root.urgentIcon(cls), cls: cls };
+        urgentLife.restart();
+    }
+
+    function urgentCalm(addr) {
+        if (root.urgent && (addr === "" || root.bareAddr(addr) === root.urgent.addr)) {
+            root.urgent = null;
+            urgentLife.stop();
+        }
+    }
+
+    Timer { id: urgentLife; interval: 90000; onTriggered: root.urgent = null }
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (event.name === "urgent")
+                root.urgentRaise(event.data);
+            else if (root.urgent !== null && event.name === "activewindowv2")
+                root.urgentCalm(event.data);
+            else if (root.urgent !== null && event.name === "closewindow")
+                root.urgentCalm(event.data);
         }
     }
 

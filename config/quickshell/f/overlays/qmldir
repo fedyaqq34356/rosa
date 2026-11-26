@@ -37,3 +37,5 @@ IslandSand IslandSand.qml
 LockView LockView.qml
 IslandCrab IslandCrab.qml
 WallPour WallPour.qml
+SoundGlyph SoundGlyph.qml
+BtGlyph BtGlyph.qml

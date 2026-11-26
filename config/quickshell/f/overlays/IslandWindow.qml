@@ -2835,6 +2835,7 @@ PanelWindow {
                 switch (win.hub.leftKind) {
                 case "print": return Colors.accentAlt;
                 case "remind": return Colors.warn;
+                case "urgent": return Colors.warn;
                 case "sys":
                     return Colors.mix(Colors.warn, Colors.bad,
                                       Math.max(0, Math.min(1, (win.hub.sysHeat - 0.75) / 0.2)));
@@ -2877,13 +2878,26 @@ PanelWindow {
                     : win.hub.leftKind === "download"
                     ? (win.hub.downloadPhase === "ok" ? "ok" : "")
                     : win.hub.taskResult
-                icon: win.hub.launch ? win.hub.launch.icon : ""
+                icon: win.hub.leftKind === "urgent" && win.hub.urgent ? win.hub.urgent.icon
+                    : win.hub.launch ? win.hub.launch.icon : ""
                 load: win.hub.sysLoad
             }
 
             TapHandler {
                 enabled: win.hub.leftKind === "sys"
                 onTapped: IslandBus.sysOpen()
+            }
+            TapHandler {
+                enabled: win.hub.leftKind === "urgent" && win.hub.urgent !== null
+                onTapped: {
+                    const a = win.hub.urgent.addr;
+                    win.hub.urgentCalm("");
+                    win.hub.focusWindow(a);
+                }
+            }
+            HoverHandler {
+                enabled: win.hub.leftKind === "urgent"
+                cursorShape: Qt.PointingHandCursor
             }
             HoverHandler {
                 enabled: win.hub.leftKind === "sys"

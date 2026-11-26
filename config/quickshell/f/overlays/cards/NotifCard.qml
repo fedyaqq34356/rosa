@@ -88,9 +88,83 @@ Item {
         if (t === "" || !card.live)
             return;
         card.live.sendInlineReply(t);
+        card.sentText = t;
         field.text = "";
+        card.sending = true;
         card.reply(false);
-        card.done();
+        sendFly.restart();
+    }
+
+    property bool sending: false
+    property string sentText: ""
+    property real flyP: 0
+
+    SequentialAnimation {
+        id: sendFly
+        NumberAnimation { target: card; property: "flyP"; from: 0; to: 1; duration: 720; easing.type: Easing.InCubic }
+        ScriptAction { script: { card.sending = false; card.done(); } }
+    }
+
+    Item {
+        id: sentLayer
+        anchors.fill: parent
+        z: 50
+        visible: card.sending
+
+        Rectangle {
+            id: sentBubble
+            readonly property real lift: card.flyP
+            readonly property real startY: tray.y + (tray.height - height) / 2
+            readonly property real endY: -height - 22
+
+            anchors.right: parent.right
+            width: Math.min(sentLabel.implicitWidth + 26, parent.width * 0.78)
+            height: Math.max(26, sentLabel.implicitHeight + 12)
+            radius: 13
+            color: card.tint
+            y: startY + (endY - startY) * lift
+            opacity: 1 - Math.max(0, (lift - 0.55) / 0.45)
+            transform: Scale {
+                origin.x: sentBubble.width
+                origin.y: sentBubble.height
+                xScale: 1 - 0.10 * Math.sin(Math.PI * Math.min(1, sentBubble.lift * 1.6)) + 0.06 * sentBubble.lift
+                yScale: 1 + 0.12 * Math.sin(Math.PI * Math.min(1, sentBubble.lift * 1.6)) - 0.10 * sentBubble.lift
+            }
+
+            RectangularShadow {
+                z: -1
+                anchors.fill: parent
+                radius: parent.radius
+                blur: 18
+                color: Colors.alpha(card.tint, 0.55)
+            }
+
+            Rectangle {
+                width: 9
+                height: 9
+                rotation: 45
+                radius: 2
+                color: card.tint
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: -3
+                opacity: 1 - Math.min(1, sentBubble.lift * 3)
+            }
+
+            Text {
+                id: sentLabel
+                anchors.centerIn: parent
+                width: Math.min(implicitWidth, sentBubble.width - 26)
+                text: card.sentText
+                color: "white"
+                elide: Text.ElideRight
+                font.family: Fonts.display
+                font.features: { "tnum": 1 }
+                font.pixelSize: 13
+                font.weight: Font.Medium
+            }
+        }
     }
 
     readonly property real t: card.visible ? (Phase.ts % 11) / 11 * Math.PI * 2 : 0
@@ -438,7 +512,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: card.toolsH
-        visible: card.toolsShow > 0.01
+        visible: card.toolsShow > 0.01 && !card.sending
         opacity: Math.min(1, card.toolsShow * 1.4)
         transform: [
             Translate { y: 10 * (1 - card.toolsShow) },

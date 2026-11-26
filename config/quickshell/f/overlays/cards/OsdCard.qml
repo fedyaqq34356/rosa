@@ -98,6 +98,18 @@ Item {
         size: 46
         glyph: card.glyph
         tint: card.tint
+        art: Feedback.channel === "sink" || Feedback.channel === "source" ? soundArt : null
+    }
+
+    Component {
+        id: soundArt
+        SoundGlyph {
+            mode: Feedback.channel === "source" ? "mic" : "speaker"
+            muted: Feedback.flat
+            fromMuted: Feedback.justUnmuted
+            ink: "white"
+            cut: Qt.darker(card.tint, 1.6)
+        }
     }
 
     Column {

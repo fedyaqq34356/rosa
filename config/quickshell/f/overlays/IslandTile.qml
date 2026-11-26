@@ -16,6 +16,7 @@ Item {
     property real glyphScale: 0.46
     property color ink: "white"
     property bool drift: true
+    property Component art: null
 
     width: tile.size
     height: tile.size
@@ -130,9 +131,18 @@ Item {
             antialiasing: true
         }
 
+        Loader {
+            anchors.centerIn: parent
+            width: Math.round(tile.size * tile.glyphScale * 1.25)
+            height: width
+            active: tile.art !== null
+            sourceComponent: tile.art
+        }
+
         Text {
             id: sign
             anchors.centerIn: parent
+            visible: tile.art === null
             text: tile.glyph
             color: tile.ink
             font.family: Fonts.glyph

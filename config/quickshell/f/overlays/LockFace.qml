@@ -150,7 +150,7 @@ Item {
 
             opacity: 0
 
-            RollText {
+            LiquidText {
                 text: Qt.formatDateTime(clock.date, "HH")
                 color: "white"
                 family: Fonts.display
@@ -172,7 +172,7 @@ Item {
                 font.weight: Font.DemiBold
             }
 
-            RollText {
+            LiquidText {
                 text: Qt.formatDateTime(clock.date, "mm")
                 color: "white"
                 family: Fonts.display
@@ -263,7 +263,7 @@ Item {
             y: stack.y + digits.y
             spacing: digits.spacing
 
-            RollText {
+            LiquidText {
                 text: Qt.formatDateTime(clock.date, "HH")
                 color: "white"
                 family: Fonts.display
@@ -283,7 +283,7 @@ Item {
                 font.pixelSize: 190
                 font.weight: Font.Bold
             }
-            RollText {
+            LiquidText {
                 text: Qt.formatDateTime(clock.date, "mm")
                 color: "white"
                 family: Fonts.display

@@ -181,7 +181,9 @@ Item {
         anchors.centerIn: parent
         width: appIcon.implicitSize
         height: appIcon.implicitSize
-        visible: slot.kind === "launch" && slot.icon !== "" && appIcon.opacity > 0.01
+        visible: (slot.kind === "launch" || slot.kind === "urgent") && slot.icon !== "" && appIcon.opacity > 0.01
+
+        readonly property bool calling: slot.kind === "urgent" && slot.live
 
         SequentialAnimation on scale {
             running: slot.kind === "launch" && slot.result === "" && slot.live
@@ -190,6 +192,27 @@ Item {
             onStopped: pulse.scale = 1
             NumberAnimation { to: 0.86; duration: 700; easing.type: Easing.InOutSine }
             NumberAnimation { to: 1.0;  duration: 700; easing.type: Easing.InOutSine }
+        }
+
+        property real call: 0
+        SequentialAnimation on call {
+            running: pulse.calling
+            loops: Animation.Infinite
+            paused: running && Stage.gaming
+            onStopped: pulse.call = 0
+            NumberAnimation { from: 0; to: 1; duration: 1100; easing.type: Easing.InOutSine }
+            NumberAnimation { from: 1; to: 0; duration: 1100; easing.type: Easing.InOutSine }
+        }
+
+        RectangularShadow {
+            anchors.centerIn: parent
+            visible: pulse.calling
+            width: appIcon.implicitSize
+            height: width
+            radius: width / 2
+            blur: 4 + 8 * pulse.call
+            spread: 1 + 2 * pulse.call
+            color: Colors.alpha(slot.tint, 0.18 + 0.32 * pulse.call)
         }
 
         IconImage {

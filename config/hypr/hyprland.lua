@@ -5,6 +5,7 @@ require("cfg.look")
 require("cfg.animations")
 require("cfg.binds")
 require("cfg.rules")
+require("cfg.motion")
 require("cfg.startup")
 
 if v.serezha then

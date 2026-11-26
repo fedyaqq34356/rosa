@@ -34,6 +34,8 @@ Singleton {
         onTriggered: root.shown = false
     }
 
+    property bool justUnmuted: false
+
     function flash(icon, value, withBar, label, isFlat, channel) {
         const from = root.channel === channel ? root.lastValue : -1;
         root.way = (isFlat === true || from < 0)
@@ -62,12 +64,14 @@ Singleton {
         function onVolumeChanged() {
             if (root.sink.audio.muted)
                 return;
+            root.justUnmuted = false;
             root.flash("󰕾", root.sink.audio.volume, true,
                        root.percent(root.sink.audio.volume), false, "sink");
         }
 
         function onMutedChanged() {
             const m = root.sink.audio.muted;
+            root.justUnmuted = !m;
             root.flash(m ? "󰝟" : "󰕾", root.sink.audio.volume, true,
                        m ? I18n.t("audio.mutedShort") : root.percent(root.sink.audio.volume),
                        m, "sink");
@@ -80,6 +84,7 @@ Singleton {
 
         function onMutedChanged() {
             const m = root.source.audio.muted;
+            root.justUnmuted = !m;
             root.flash(m ? "󰍭" : "󰍬", root.source.audio.volume, true,
                        m ? I18n.t("audio.micOff") : root.percent(root.source.audio.volume),
                        m, "source");
@@ -88,6 +93,7 @@ Singleton {
         function onVolumeChanged() {
             if (root.source.audio.muted)
                 return;
+            root.justUnmuted = false;
             root.flash("󰍬", root.source.audio.volume, true,
                        root.percent(root.source.audio.volume), false, "source");
         }
@@ -98,6 +104,7 @@ Singleton {
         enabled: root.ready
 
         function onValueChanged() {
+            root.justUnmuted = false;
             root.flash("󰃞", Brightness.value, true,
                        root.percent(Brightness.value), false, "light");
         }

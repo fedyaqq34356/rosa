@@ -23,6 +23,22 @@ Item {
         : (bc.dev && bc.dev.batteryAvailable ? bc.dev.battery : -1)
     readonly property color hue: bc.gone ? Colors.fgDim : bc.tint
 
+    readonly property string kind: {
+        const icon = bc.d ? (bc.d.icon || "audio-headphones")
+                   : (bc.dev && bc.dev.icon ? bc.dev.icon : "");
+        const s = String(icon).toLowerCase();
+        if (/head|ear|audio|speaker|bud/.test(s)) return "headphones";
+        if (/mouse/.test(s)) return "mouse";
+        if (/keyboard/.test(s)) return "keyboard";
+        if (/phone/.test(s)) return "phone";
+        return "";
+    }
+
+    Component {
+        id: btArt
+        BtGlyph { device: bc.kind; ink: "white" }
+    }
+
     IslandTile {
         id: btTile
         anchors.left: parent.left
@@ -32,6 +48,7 @@ Item {
         round: true
         glyph: bc.gone ? "󰂲" : (bc.d ? "󰋋" : bc.glyph)
         tint: bc.hue
+        art: !bc.gone && bc.kind !== "" ? btArt : null
         sonar: !bc.gone
         implode: bc.gone
         sparks: !bc.gone
