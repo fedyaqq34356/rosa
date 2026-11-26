@@ -32,6 +32,7 @@ Singleton {
     property real isleH: 0
     property string isleScreen: ""
     property int watch: 0
+    property real veil: 0
     property bool locked: false
     property bool crabDemo: false
 

@@ -15,7 +15,7 @@ local once = {
     v.home .. "/.local/bin/shell-autostart",
     S .. "/system/fix-dbus.sh",
 
-    "awww-daemon",
+    "awww-daemon --no-cache",
     S .. "/wallpaper/startup-wallpaper.sh",
     S .. "/wallpaper/wallpaper-rotate.sh",
     "xdg-user-dirs-update",

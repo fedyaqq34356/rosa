@@ -138,6 +138,7 @@ hl.config({
     misc = {
         disable_hyprland_logo    = true,
         disable_splash_rendering = true,
+        background_color         = "rgb(000000)",
         mouse_move_enables_dpms  = true,
         vrr               = 0,  -- VRR 2 stuttered on fullscreen (R24s over HDMI)
         focus_on_activate = false,

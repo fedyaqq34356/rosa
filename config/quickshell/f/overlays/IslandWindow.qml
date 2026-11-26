@@ -1261,7 +1261,7 @@ PanelWindow {
         anchors.leftMargin: 16 + IslandConfig.s("offsetX") - stage.head
         anchors.rightMargin: 16 - IslandConfig.s("offsetX") + stage.tail
 
-        opacity: birth.value
+        opacity: birth.value * (1 - IslandBus.veil)
         scale: (0.90 + 0.10 * birth.value)
                * (1 + (Motion.isleHoverScale - 1) * hoverLift.value)
                * (1 + (Motion.islePeekScale - 1) * peek.value)
@@ -1375,7 +1375,7 @@ PanelWindow {
             offset.y: 2 + 4 * morph.value
             color: Colors.alpha(win.tint, Math.min(0.9, aura.power))
             visible: IslandConfig.s("glow") && aura.power > 0.005
-            opacity: birth.value
+            opacity: birth.value * (1 - IslandBus.veil)
 
             Behavior on color { ColorAnimation { duration: Motion.slow } }
         }
