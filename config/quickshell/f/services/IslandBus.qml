@@ -23,6 +23,10 @@ Singleton {
     readonly property int searchW: 600
     readonly property int searchH: 44
 
+    property var finder: null
+    property real findH: 0
+    property var seekWin: null
+
     signal keyed(int dir)
     signal nomatch()
 

@@ -31,6 +31,7 @@ IslandCheck IslandCheck.qml
 IslandWifi IslandWifi.qml
 IslandMeter IslandMeter.qml
 IslandSearch IslandSearch.qml
+IslandFind IslandFind.qml
 LockFace LockFace.qml
 IslandSand IslandSand.qml
 LockView LockView.qml

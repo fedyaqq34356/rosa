@@ -458,6 +458,23 @@ PanelWindow {
         target: win.seeking ? 1 : 0
     }
 
+    MorphSpring {
+        id: findGrow
+        springBack: true
+        response: 0.66
+        damping: 1.0
+        epsilon: 0.2
+        target: win.seeking ? IslandBus.findH : 0
+    }
+
+    Binding {
+        target: IslandBus
+        property: "seekWin"
+        value: win
+        when: win.seeking
+        restoreMode: Binding.RestoreNone
+    }
+
     FrameAnimation {
         running: ((win.seeking || seek.running)
                   && IslandBus.searchScreen === win.modelData.name)
@@ -1537,7 +1554,7 @@ PanelWindow {
             readonly property real seekW:
                 Motion.mix(surface.bareW, IslandBus.searchW, seek.value)
             readonly property real seekH:
-                Motion.mix(surface.bareH, IslandBus.searchH, seek.value)
+                Motion.mix(surface.bareH, IslandBus.searchH + findGrow.value, seek.value)
 
             readonly property real dot: Math.max(doze.value, fold.value)
             width: Math.round(Motion.mix(
@@ -2139,15 +2156,23 @@ PanelWindow {
                 }
 
                 IslandSearch {
-                    anchors.fill: parent
+                    width: parent.width
+                    height: Math.min(parent.height, IslandBus.searchH)
                     active: win.seeking
                     tint: win.tint
-                    opacity: win.seeking ? Math.min(1, Math.max(0, (seek.value - 0.45) * 2.2)) : 0
+                    opacity: (win.seeking ? Math.min(1, Math.max(0, (seek.value - 0.45) * 2.2)) : 0)
+                             * (1 - Math.min(1, findGrow.value / 30))
                     visible: opacity > 0.01
                     Behavior on opacity {
                         enabled: !win.seeking
                         NumberAnimation { duration: 120 }
                     }
+                }
+
+                IslandFind {
+                    anchors.fill: parent
+                    active: win.seeking
+                    grow: findGrow.value * Math.min(1, seek.value * 1.4)
                 }
 
                 IslandBody {

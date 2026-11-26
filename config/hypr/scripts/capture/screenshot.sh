@@ -62,7 +62,10 @@ scrub_meta() {
 
 scan_secrets() {
     have tesseract || return 0
-    text=$(tesseract "$1" - -l rus+eng 2>/dev/null) || return 0
+    exec 9>"${XDG_RUNTIME_DIR:-/tmp}/shot-scan.lock"
+    flock -w 90 9 || return 0
+    text=$(OMP_THREAD_LIMIT=1 timeout 60 nice -n 19 ionice -c3 \
+        tesseract "$1" - -l eng 2>/dev/null) || return 0
     hits=$(printf '%s' "$text" | grep -oiE \
         'sk-ant-[a-z0-9_-]{8,}|ghp_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|[0-9]{8,10}:AA[A-Za-z0-9_-]{30,}|BEGIN [A-Z ]*PRIVATE KEY|/home/[a-z0-9_-]+/' \
         | sort -u | head -4)

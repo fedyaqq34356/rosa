@@ -12,6 +12,8 @@ Scope {
     id: root
 
     property bool shown: false
+    readonly property var face: drops
+    Component.onCompleted: IslandBus.finder = root
 
     function toggle() {
         root.shown = !root.shown;
@@ -53,7 +55,7 @@ Scope {
             root.winSel = Math.max(0, Math.min(root.wins.length - 1, root.winSel + step));
             return;
         }
-        if (root.calcMode || root.convMode || root.noteish || root.runMode || root.drip)
+        if (root.calcMode || root.convMode || root.noteish || root.runMode)
             return;
         const n = root.drip ? Math.min(root.results.length, 10) : root.results.length;
         root.sel = Math.max(0, Math.min(n - 1, root.sel + step));
@@ -475,7 +477,7 @@ Scope {
 
     HyprlandFocusGrab {
         active: root.shown
-        windows: [win]
+        windows: root.drip && IslandBus.seekWin ? [win, IslandBus.seekWin] : [win]
         onCleared: root.close()
     }
 

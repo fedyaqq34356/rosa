@@ -23,7 +23,7 @@ Item {
                                   || IslandBus.query.trim() !== ""
     readonly property var best: !drip.l.calcMode && !drip.l.convMode && !drip.l.noteish
                                && !drip.l.runMode && drip.typed
-                               ? (drip.l.results[0] || null) : null
+                               ? (drip.l.results[drip.l.sel] || drip.l.results[0] || null) : null
     readonly property string kind: drip.l.runMode ? "run" : drip.l.noteMode ? "note"
                                  : drip.l.unnoteMode ? "unnote" : drip.l.convMode ? "conv"
                                  : drip.l.calcMode ? "calc" : drip.best ? "app" : ""
@@ -31,6 +31,8 @@ Item {
     Binding on conv { value: drip.l.convData; when: drip.l.convData !== null; restoreMode: Binding.RestoreNone }
 
     readonly property bool want: drip.open && drip.kind !== "" && !drip.leaving
+
+    Binding { target: IslandBus; property: "findH"; value: drip.want ? drip.cardH - IslandBus.searchH : 0 }
 
     ArtTint {
         id: art
@@ -74,8 +76,7 @@ Item {
 
     readonly property real g: Math.max(0, life.value)
     readonly property real cardW: 440
-    readonly property real cardH: drip.kind === "app" || drip.kind === "conv"
-                                  || drip.kind === "note" || drip.kind === "unnote" ? 96 : 84
+    readonly property real cardH: 84
     property real shownH: drip.cardH
     Behavior on shownH { NumberAnimation { duration: 560; easing.type: Easing.InOutCubic } }
 
@@ -87,6 +88,7 @@ Item {
     readonly property bool holding: drip.leaving && life.value > 0.12
     Item {
         id: under
+        visible: false
         y: drip.base - 1
         width: drip.width
         height: Math.max(0, drip.height - y)
